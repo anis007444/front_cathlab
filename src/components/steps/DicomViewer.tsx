@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { FileText, PanelLeftClose, PanelLeft, Loader2, AlertCircle } from "lucide-react";
+import { PanelLeftClose, PanelLeft, Loader2, AlertCircle } from "lucide-react";
 import { InterventionData } from "@/types/intervention";
 import { DicomCine, DicomSeries, DicomStudy, MOCK_STUDY } from "@/types/dicom";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import DicomTree from "@/components/dicom/DicomTree";
 import ViewerPanel from "@/components/dicom/ViewerPanel";
@@ -152,20 +151,6 @@ const DicomViewer = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
             selectedCine={selectedCine}
           />
         </div>
-      </div>
-
-      {/* Clinical notes */}
-      <div className="clinical-card flex flex-col">
-        <div className="flex items-center gap-2 mb-3">
-          <FileText size={18} className="text-primary" />
-          <span className="font-medium text-foreground">Observations cliniques</span>
-        </div>
-        <Textarea
-          placeholder="Ajouter des observations cliniques de l'angiographie..."
-          value={data.viewerNotes}
-          onChange={(e) => onChange({ viewerNotes: e.target.value })}
-          className="min-h-[120px] clinical-input resize-none"
-        />
       </div>
 
       <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">

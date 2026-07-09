@@ -78,6 +78,11 @@ const roleBadgeClass: Record<Role, string> = {
     Pharmacien: "bg-orange-500/10 text-orange-500 border border-orange-500/20",
 };
 
+const statusLabel: Record<Status, string> = {
+    Active: "Actif",
+    Inactive: "Inactif",
+};
+
 function initials(u: AppUser) {
     return (u.firstName[0] ?? "") + (u.lastName[0] ?? "");
 }
@@ -213,19 +218,19 @@ export function AdminUsersPage() {
 
     function validate(): boolean {
         const e: Partial<Record<keyof FormState, string>> = {};
-        if (!form.firstName.trim()) e.firstName = "Required";
-        if (!form.lastName.trim()) e.lastName = "Required";
-        if (!form.email.trim()) e.email = "Required";
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Invalid email";
+        if (!form.firstName.trim()) e.firstName = "Requis";
+        if (!form.lastName.trim()) e.lastName = "Requis";
+        if (!form.email.trim()) e.email = "Requis";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Email invalide";
         if (!editingId && form.password.length < 6)
-            e.password = "Min 6 characters";
+            e.password = "Au moins 6 caractères";
         setErrors(e);
         return Object.keys(e).length === 0;
     }
 
     async function handleSave() {
         if (!validate()) {
-            toast.error("Please fix the errors in the form.");
+            toast.error("Veuillez corriger les erreurs du formulaire.");
             return;
         }
 
@@ -246,10 +251,10 @@ export function AdminUsersPage() {
         try {
             if (editingId) {
                 await axios.put(`http://localhost:5106/api/Account/update/${editingId}`, payload);
-                toast.success("User updated successfully.");
+                toast.success("Utilisateur mis à jour avec succès.");
             } else {
                 await axios.post("http://localhost:5106/api/Account/register", payload);
-                toast.success("User created successfully.");
+                toast.success("Utilisateur créé avec succès.");
             }
 
             setModalOpen(false);
@@ -262,7 +267,7 @@ export function AdminUsersPage() {
 
     async function toggleStatus(u: AppUser, next: boolean) {
         if (!next && u.role === "Admin") {
-            toast.error("Admin users cannot be disabled.");
+            toast.error("Les administrateurs ne peuvent pas être désactivés.");
             return;
         }
         if (!next) {
@@ -279,7 +284,7 @@ export function AdminUsersPage() {
                     x.id === u.id ? { ...x, status: isActive ? "Active" : "Inactive" } : x
                 ),
             );
-            toast.success(`${u.firstName} ${u.lastName} ${isActive ? "activated" : "disabled"}.`);
+            toast.success(`${u.firstName} ${u.lastName} ${isActive ? "activé" : "désactivé"}.`);
         } catch (error) {
             console.error("Error toggling user status:", error);
             toast.error("Erreur lors du changement de statut.");
@@ -300,7 +305,7 @@ export function AdminUsersPage() {
                     x.id === confirmDisableId ? { ...x, status: isActive ? "Active" : "Inactive" } : x,
                 ),
             );
-            toast.success(`${u.firstName} ${u.lastName} ${isActive ? "activated" : "disabled"}.`);
+            toast.success(`${u.firstName} ${u.lastName} ${isActive ? "activé" : "désactivé"}.`);
         } catch (error) {
             console.error("Error toggling user status:", error);
             toast.error("Erreur lors du changement de statut.");
@@ -315,14 +320,14 @@ export function AdminUsersPage() {
             <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
                 <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">User Management</h1>
+                        <h1 className="text-xl font-semibold tracking-tight">Gestion des utilisateurs</h1>
                         <p className="text-xs text-muted-foreground">
-                            Manage clinical staff accounts and access
+                            Gérer les comptes et les accès du personnel 
                         </p>
                     </div>
                     <Button onClick={openCreate} className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Add User
+                        Ajouter un utilisateur
                     </Button>
                 </div>
             </header>
@@ -337,7 +342,7 @@ export function AdminUsersPage() {
                                 <Input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search by name or email"
+                                    placeholder="Rechercher par nom ou email"
                                     className="pl-9"
                                 />
                             </div>
@@ -349,10 +354,10 @@ export function AdminUsersPage() {
                                     <SelectValue placeholder="Role" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="All">All roles</SelectItem>
+                                    <SelectItem value="All">Tous les rôles</SelectItem>
                                     <SelectItem value="Admin">Admin</SelectItem>
-                                    <SelectItem value="Medecin">Medecin</SelectItem>
-                                    <SelectItem value="Secretaire">Secretaire</SelectItem>
+                                    <SelectItem value="Medecin">Médecin</SelectItem>
+                                    <SelectItem value="Secretaire">Secrétaire</SelectItem>
                                     <SelectItem value="Pharmacien">Pharmacien</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -364,9 +369,9 @@ export function AdminUsersPage() {
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="All">All statuses</SelectItem>
-                                    <SelectItem value="Active">Active</SelectItem>
-                                    <SelectItem value="Inactive">Inactive</SelectItem>
+                                    <SelectItem value="All">Tous les statuts</SelectItem>
+                                    <SelectItem value="Active">Actif</SelectItem>
+                                    <SelectItem value="Inactive">Inactif</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -375,10 +380,10 @@ export function AdminUsersPage() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                        <th className="px-4 py-3 font-medium">Name</th>
+                                        <th className="px-4 py-3 font-medium">Nom</th>
                                         <th className="px-4 py-3 font-medium">Email</th>
-                                        <th className="px-4 py-3 font-medium">Role</th>
-                                        <th className="px-4 py-3 font-medium">Status</th>
+                                        <th className="px-4 py-3 font-medium">Rôle</th>
+                                        <th className="px-4 py-3 font-medium">Statut</th>
                                         
                                         <th className="px-4 py-3 text-right font-medium">Actions</th>
                                     </tr>
@@ -387,7 +392,7 @@ export function AdminUsersPage() {
                                     {filtered.length === 0 && (
                                         <tr>
                                             <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                                                {isLoading ? "Chargement des utilisateurs..." : "No users match your filters."}
+                                                {isLoading ? "Chargement des utilisateurs..." : "Aucun utilisateur ne correspond à vos filtres."}
                                             </td>
                                         </tr>
                                     )}
@@ -435,7 +440,7 @@ export function AdminUsersPage() {
                                                             u.status === "Active" ? "bg-emerald-500" : "bg-muted-foreground/50",
                                                         )}
                                                     />
-                                                    {u.status}
+                                                    {statusLabel[u.status]}
                                                 </span>
                                             </td>
                                             
@@ -459,7 +464,7 @@ export function AdminUsersPage() {
                                                             e.stopPropagation();
                                                             toggleStatus(u, u.status !== "Active");
                                                         }}
-                                                        title={u.role === "Admin" ? "Admin cannot be disabled" : ""}
+                                                        title={u.role === "Admin" ? "Impossible de désactiver un administrateur" : ""}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -482,7 +487,7 @@ export function AdminUsersPage() {
                                     disabled={pageNumber === 1 || isLoading}
                                     onClick={() => setPageNumber((prev) => Math.max(1, prev - 1))}
                                 >
-                                    Préc
+                                    Précédent
                                 </Button>
                                 <Button
                                     size="sm"
@@ -490,7 +495,7 @@ export function AdminUsersPage() {
                                     disabled={pageNumber >= Math.ceil(totalItems / pageSize) || isLoading}
                                     onClick={() => setPageNumber((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
                                 >
-                                    Suiv
+                                    Suivant
                                 </Button>
                                 <Select
                                     value={String(pageSize)}
@@ -503,9 +508,9 @@ export function AdminUsersPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="10">10 / page</SelectItem>
-                                        <SelectItem value="20">20 / page</SelectItem>
-                                        <SelectItem value="50">50 / page</SelectItem>
+                                        <SelectItem value="10">10 par page</SelectItem>
+                                        <SelectItem value="20">20 par page</SelectItem>
+                                        <SelectItem value="50">50 par page</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -518,7 +523,7 @@ export function AdminUsersPage() {
                             <div className="flex flex-col items-center justify-center py-16 text-center">
                                 <UserIcon className="mb-3 h-10 w-10 text-muted-foreground" />
                                 <p className="text-sm text-muted-foreground">
-                                    Select a user to view details
+                                    Sélectionnez un utilisateur pour voir ses détails
                                 </p>
                             </div>
                         ) : (
@@ -543,11 +548,11 @@ export function AdminUsersPage() {
                                 <div className="rounded-lg border border-border bg-muted/30 p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-medium">Account status</p>
+                                            <p className="text-sm font-medium">Statut du compte</p>
                                             <p className="text-xs text-muted-foreground">
                                                 {selected.status === "Active"
-                                                    ? "User can sign in"
-                                                    : "Sign-in disabled"}
+                                                    ? "L'utilisateur peut se connecter"
+                                                    : "Connexion désactivée"}
                                             </p>
                                         </div>
                                         <Switch
@@ -570,8 +575,8 @@ export function AdminUsersPage() {
                                                 <XCircle className="h-4 w-4 text-muted-foreground" />
                                             )
                                         }
-                                        label="Status"
-                                        value={selected.status}
+                                        label="Statut"
+                                        value={statusLabel[selected.status]}
                                     />
                                 </div>
 
@@ -586,18 +591,18 @@ export function AdminUsersPage() {
             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                 <DialogContent className="sm:max-w-[480px]">
                     <DialogHeader>
-                        <DialogTitle>{editingId ? "Edit user" : "Add new user"}</DialogTitle>
+                        <DialogTitle>{editingId ? "Modifier l’utilisateur" : "Ajouter un utilisateur"}</DialogTitle>
                         <DialogDescription>
                             {editingId
-                                ? "Update the user's details below."
-                                : "Create a new staff account for the clinic."}
+                                ? "Mettez à jour les informations de l’utilisateur ci-dessous."
+                                : "Créer un nouveau compte pour le personnel de la clinique."}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-4 py-2">
                         <div className="grid grid-cols-2 gap-3">
                             <Field
-                                label="First name"
+                                label="Prénom"
                                 error={errors.firstName}
                                 input={
                                     <Input
@@ -607,7 +612,7 @@ export function AdminUsersPage() {
                                 }
                             />
                             <Field
-                                label="Last name"
+                                label="Nom"
                                 error={errors.lastName}
                                 input={
                                     <Input
@@ -632,7 +637,7 @@ export function AdminUsersPage() {
 
                         {!editingId && (
                             <Field
-                                label="Password"
+                                label="Mot de passe"
                                 error={errors.password}
                                 input={
                                     <Input
@@ -646,7 +651,7 @@ export function AdminUsersPage() {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label>Role</Label>
+                                <Label>Rôle</Label>
                                 <Select
                                     value={form.role}
                                     onValueChange={(v) => setForm({ ...form, role: v as Role })}
@@ -664,10 +669,10 @@ export function AdminUsersPage() {
                                 </Select>
                             </div>
                             <div className="space-y-1.5">
-                                <Label>Status</Label>
+                                <Label>Statut</Label>
                                 <div className="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3">
                                     <span className="text-sm text-muted-foreground">
-                                        {form.status === "Active" ? "Active" : "Inactive"}
+                                        {statusLabel[form.status]}
                                     </span>
                                     <Switch
                                         checked={form.status === "Active"}
@@ -683,9 +688,9 @@ export function AdminUsersPage() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setModalOpen(false)}>
                             <X className="mr-1 h-4 w-4" />
-                            Cancel
+                            Annuler
                         </Button>
-                        <Button onClick={handleSave}>Save</Button>
+                        <Button onClick={handleSave}>Enregistrer</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -697,15 +702,14 @@ export function AdminUsersPage() {
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Disable this user?</AlertDialogTitle>
+                        <AlertDialogTitle>Désactiver cet utilisateur ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            The user will no longer be able to sign in. You can re-enable
-                            them at any time.
+                            L'utilisateur ne pourra plus se connecter. Vous pouvez les réactiver à tout moment.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDisable}>Disable</AlertDialogAction>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDisable}>Désactiver</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

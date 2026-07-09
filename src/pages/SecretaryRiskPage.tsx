@@ -60,6 +60,7 @@ type Patient = {
     age: number;
     gender: Gender;
     phone?: string;
+    patientBir?: string;
     riskFactors: string[];
 };
 
@@ -145,6 +146,7 @@ export default function SecretaryRiskPage() {
                         age: age,
                         gender: p.patientSex === "M" ? "M" : "F",
                         phone: "",
+                        patientBir: p.patientBir || "",
                         riskFactors: [],
                     };
                 });
@@ -281,31 +283,21 @@ export default function SecretaryRiskPage() {
                 <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                            Patient Risk Management
-                        </h1>
+                            Gestion des risques                        </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Assign cardiovascular risk factors to patients
+                            Assigner les facteurs de risque aux patients
                         </p>
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div className="relative">
+                    <div className="flex flex-1 justify-center">
+                        <div className="relative w-full max-w-md">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by name or MRN…"
-                                className="h-10 w-full pl-9 sm:w-72"
+                                placeholder="Rechercher un patient…"
+                                className="h-10 w-full pl-9"
                             />
                         </div>
-                        <Button
-                            size="lg"
-                            onClick={() => openAddModal(selectedId, true)}
-                            disabled={!selectedId}
-                            className="gap-2"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Risk Factors
-                        </Button>
                     </div>
                 </header>
 
@@ -315,9 +307,6 @@ export default function SecretaryRiskPage() {
                     <aside className="rounded-xl border border-border bg-card shadow-sm">
                         <div className="flex items-center justify-between border-b border-border px-4 py-3">
                             <h2 className="text-sm font-semibold text-foreground">Patients</h2>
-                            <Badge variant="secondary" className="font-mono text-xs">
-                                {filteredPatients.length}
-                            </Badge>
                         </div>
                         <ScrollArea className="h-[calc(100vh-260px)]">
                             <ul className="divide-y divide-border">
@@ -346,16 +335,8 @@ export default function SecretaryRiskPage() {
                                                     {p.lastName[0]}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="truncate text-sm font-semibold text-foreground">
-                                                            {p.firstName} {p.lastName}
-                                                        </p>
-                                                        <span className="font-mono text-[10px] text-muted-foreground">
-                                                            {p.mrn}
-                                                        </span>
-                                                    </div>
-                                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                                        {p.age} y · {p.gender === "M" ? "Male" : "Female"}
+                                                    <p className="truncate text-sm font-semibold text-foreground">
+                                                        {p.firstName} {p.lastName}
                                                     </p>
                                                 </div>
                                             </button>
@@ -381,39 +362,23 @@ export default function SecretaryRiskPage() {
                             <>
                                 {/* Patient summary */}
                                 <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                                <UserIcon className="h-7 w-7" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-xl font-semibold text-foreground">
-                                                    {selected.firstName} {selected.lastName}
-                                                </h2>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {selected.age} years · {selected.gender === "M" ? "Male" : "Female"}
-                                                </p>
-                                            </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                            <UserIcon className="h-7 w-7" />
                                         </div>
-                                        <div
-                                            className={cn(
-                                                "inline-flex items-center gap-2 self-start rounded-full border px-3 py-1 text-xs font-semibold",
-                                                toneClasses[riskLevel(selected.riskFactors.length).tone],
-                                            )}
-                                        >
-                                            <AlertTriangle className="h-3.5 w-3.5" />
-                                            {riskLevel(selected.riskFactors.length).label} risk
-                                        </div>
+                                        <h2 className="text-xl font-semibold text-foreground">
+                                            {selected.firstName} {selected.lastName}
+                                        </h2>
                                     </div>
 
-                                    <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-3">
+                                    <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
                                         <div className="flex items-center gap-2">
                                             <IdCard className="h-4 w-4 text-muted-foreground" />
                                             <div>
                                                 <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                                    MRN
+                                                    Date de naissance
                                                 </dt>
-                                                <dd className="font-mono text-sm text-foreground">{selected.mrn}</dd>
+                                                <dd className="font-mono text-sm text-foreground">{selected.patientBir ?? "—"}</dd>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -427,15 +392,6 @@ export default function SecretaryRiskPage() {
                                                 </dd>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Phone className="h-4 w-4 text-muted-foreground" />
-                                            <div>
-                                                <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                                    Phone
-                                                </dt>
-                                                <dd className="text-sm text-foreground">{selected.phone ?? "—"}</dd>
-                                            </div>
-                                        </div>
                                     </dl>
                                 </div>
 
@@ -445,42 +401,28 @@ export default function SecretaryRiskPage() {
                                         <div>
                                             <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
                                                 <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                                Cardiovascular Risk Factors
+                                                Facteurs de risque
                                             </h3>
                                             <p className="mt-0.5 text-xs text-muted-foreground">
-                                                {selected.riskFactors.length === 0
-                                                    ? "This patient has no recorded risk factors"
-                                                    : "Toggle the factors that apply to this patient"}
-                                            </p>
+    {selected.riskFactors.length === 0
+        ? "Ce patient n'a aucun facteur de risque enregistré"
+        : ""}
+</p>
                                         </div>
-                                        <Badge
-                                            variant="secondary"
-                                            className={cn(
-                                                "self-start font-medium",
-                                                draftFactors.size > 2 && "bg-red-500/10 text-red-700 dark:text-red-400",
-                                                draftFactors.size > 0 &&
-                                                draftFactors.size <= 2 &&
-                                                "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-                                                draftFactors.size === 0 &&
-                                                "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-                                            )}
-                                        >
-                                            {draftFactors.size} factor{draftFactors.size === 1 ? "" : "s"} selected
-                                        </Badge>
                                     </div>
 
                                     {selected.riskFactors.length === 0 && draftFactors.size === 0 ? (
-                                        /* Empty state — no risk factors recorded */
+                                        /* Empty state — Aucun facteur de risque enregistré */
                                         <div className="mt-5 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
                                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                                                 <ShieldCheck className="h-6 w-6" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-foreground">
-                                                    No risk factors recorded
+                                                    Aucun facteur de risque enregistré
                                                 </p>
                                                 <p className="mt-1 text-xs text-muted-foreground">
-                                                    Add cardiovascular risk factors for{" "}
+                                                    Ajouter des facteurs de risque pour{" "}
                                                     {selected.firstName} {selected.lastName}
                                                 </p>
                                             </div>
@@ -490,7 +432,7 @@ export default function SecretaryRiskPage() {
                                                 className="mt-2 gap-2"
                                             >
                                                 <Plus className="h-4 w-4" />
-                                                Add Risk Factors
+                                                Ajouter des facteurs de risque
                                             </Button>
                                         </div>
                                     ) : (
@@ -498,10 +440,8 @@ export default function SecretaryRiskPage() {
                                             {/* Existing recorded factors (read-only summary) */}
                                             {selected.riskFactors.length > 0 && (
                                                 <div className="mt-5 rounded-lg border border-border bg-muted/30 p-4">
-                                                    <div className="mb-2 flex items-center justify-between gap-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                                            Currently recorded
-                                                        </p>
+                                                    <div className="mb-4 flex items-center justify-between">
+                                                        <h3 className="text-sm font-semibold text-foreground">Facteurs de risque enregistrés</h3>
                                                         <div className="flex items-center gap-2">
                                                             <Button
                                                                 size="sm"
@@ -563,7 +503,12 @@ export default function SecretaryRiskPage() {
                     if (patientId === selectedId) {
                         setDraftFactors(new Set(factors));
                     }
-                    toast.success("Risk factors updated successfully");
+                    const isEditing = patients.some((p) => p.id === patientId && p.riskFactors.length > 0);
+                    toast.success(
+                        isEditing
+                            ? "Facteurs de risque mis à jour avec succès"
+                            : "Facteurs de risque ajoutés avec succès"
+                    );
                     setModalOpen(false);
                 }}
             />
@@ -677,11 +622,6 @@ function AddRiskFactorsModal({
                     <DialogTitle>
                         {lockedPatient ? "Modifier les facteurs de risque" : "Add Risk Factors"}
                     </DialogTitle>
-                    <DialogDescription>
-                        {lockedPatient
-                            ? `Mettre à jour les facteurs de risque cardiovasculaires de ${lockedPatient.firstName} ${lockedPatient.lastName}.`
-                            : "Select a patient and assign cardiovascular risk factors."}
-                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
@@ -696,9 +636,6 @@ function AddRiskFactorsModal({
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm font-medium text-foreground">
                                         {lockedPatient.firstName} {lockedPatient.lastName}
-                                    </p>
-                                    <p className="font-mono text-[10px] text-muted-foreground">
-                                        {lockedPatient.mrn}
                                     </p>
                                 </div>
                             </div>
@@ -720,10 +657,8 @@ function AddRiskFactorsModal({
 
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label>Risk factors</Label>
-                            <span className="text-xs text-muted-foreground">
-                                {factors.size} selected
-                            </span>
+                            <Label>Facteurs de risque</Label>
+                            
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {availableRiskFactors.map((rf) => {
@@ -756,11 +691,11 @@ function AddRiskFactorsModal({
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-2">
                         <X className="h-4 w-4" />
-                        Cancel
+                        Annuler
                     </Button>
                     <Button onClick={handleSave} disabled={submitting} className="gap-2">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save
+                        Enregistrer
                     </Button>
                 </DialogFooter>
             </DialogContent>

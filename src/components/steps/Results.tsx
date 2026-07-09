@@ -1,7 +1,7 @@
-import { Sparkles, Save } from "lucide-react";
+import { Save, Sparkles } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { InterventionData } from "@/types/intervention";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,7 @@ interface Props {
 
 
 const Results = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
-  const { toast } = useToast();
-  const [conclusion, setConclusion] = useState<string>("");
+  const [conclusion, setConclusion] = useState<string>(data.conclusion || "");
   const [aiSuggestion, setAiSuggestion] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -26,28 +25,36 @@ const Results = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
     );
   };
 
-  const saveConclusion = async () => {
-    const interventionId = data.interventionId?.toString()?.trim();
+  const handleConclusionChange = (value: string) => {
+    setConclusion(value);
+    onChange({ conclusion: value });
+  };
 
-    if (!interventionId || !conclusion.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Enregistrement impossible",
-        description: "L'identifiant d'intervention est invalide ou la conclusion est vide.",
-      });
+  const handleAcceptSuggestion = () => {
+    setConclusion(aiSuggestion);
+    onChange({ conclusion: aiSuggestion });
+    setAiSuggestion("");
+  };
+
+  const handleSaveConclusion = async () => {
+    if (!data.interventionId) {
+      toast.error("ID d'intervention manquant");
       return;
     }
 
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      await axios.patch(`http://localhost:5106/api/interventions/${interventionId}/conclusion`, {
-        conclusion,
-      });
-      toast({ title: "Succès", description: "Conclusion enregistrée." });
+      await axios.patch(
+        `http://localhost:5106/api/Interventions/${data.interventionId}/conclusion`,
+        {
+          conclusion: conclusion
+        }
+      );
+      toast.success("Conclusion enregistrée avec succès");
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || error?.response?.data || error?.message || "Erreur lors de l'enregistrement.";
-      toast({ variant: "destructive", title: "Erreur", description: message });
+      const message = error?.response?.data?.message || error?.message || "Erreur lors de l'enregistrement";
+      toast.error(message);
+      console.error("Save conclusion error:", error);
     } finally {
       setIsSaving(false);
     }
@@ -55,28 +62,30 @@ const Results = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <h2 className="text-xl font-semibold text-foreground">Résultats</h2>
+      <h2 className="text-xl font-semibold text-foreground"></h2>
 
       <div className="space-y-4">
         <div className="medical-panel">
           <div className="panel-header">
             <span className="panel-header-title">Conclusion</span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={generateAiSuggestion}>
-                <Sparkles className="w-3 h-3" /> AI Suggest
-              </Button>
-              <Button size="sm" className="h-7 text-xs gap-1" onClick={saveConclusion} disabled={isSaving}>
-                <Save className="w-3 h-3" /> {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </div>
           </div>
           <div className="p-4">
             <Textarea
               value={conclusion}
-              onChange={(e) => setConclusion(e.target.value)}
-              placeholder="Write your final diagnosis and recommendations..."
+              onChange={(e) => handleConclusionChange(e.target.value)}
+              placeholder="Rédiger votre conclusion et vos recommandations..."
               className="bg-muted border-border min-h-[200px] text-sm"
             />
+            <div className="flex gap-2 mt-3">
+              <Button 
+                size="sm" 
+                className="h-8 text-xs gap-1"
+                onClick={handleSaveConclusion}
+                disabled={isSaving}
+              >
+                <Save className="w-3 h-3" /> {isSaving ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -86,7 +95,7 @@ const Results = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
               <span className="panel-header-title flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-primary" /> AI Suggestion
               </span>
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setConclusion(aiSuggestion); setAiSuggestion(""); }}>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleAcceptSuggestion}>
                 Accept
               </Button>
             </div>

@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { InterventionData, defaultInterventionData } from "@/types/intervention";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
 interface Patient {
   id: string;
@@ -49,6 +57,13 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
   const [loadingFullIntervention, setLoadingFullIntervention] = useState<number | null>(null);
   const [deletingIntervention, setDeletingIntervention] = useState<number | null>(null);
   const [interventionToDelete, setInterventionToDelete] = useState<number | null>(null);
+
+  const formatStatus = (status: string) => {
+    if (!status) return "";
+    return status
+      .replace(/Terminee/gi, "Terminé")
+      .replace(/brouillon/gi, "Brouillon");
+  };
 
   const handleDownloadPdf = (interventionId: number) => {
     const downloadUrl = `http://localhost:5106/api/Rapport/download/${interventionId}`;
@@ -107,11 +122,22 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
       const mappedData: Partial<InterventionData> = {
         interventionId: study.interventionId.toString(),
         interventionDate: interventionData.dateIntervention || new Date().toISOString(),
+        interventionStartTime: interventionData.heureDebut ? interventionData.heureDebut.substring(0, 5) : "",
+        interventionEndTime: interventionData.heureFin ? interventionData.heureFin.substring(0, 5) : "",
+        HeureDebut: interventionData.heureDebut ? interventionData.heureDebut.substring(0, 5) : "",
+        HeureFin: interventionData.heureFin ? interventionData.heureFin.substring(0, 5) : "",
         voieAcces: interventionData.voieAcces || "",
         procedureType: interventionData.typeProcedure || "",
         indicationId: interventionData.indicationId,
         typeInterventionId: interventionData.typeInterventionId,
         stentNotes: interventionData.notes || interventionData.remarques || "",
+        ProduitContraste: interventionData.produitContraste || "",
+        DoseContraste: interventionData.doseContraste || 0,
+        contrastProduct: {
+          name: interventionData.produitContraste || "",
+          volume: (interventionData.doseContraste || "").toString()
+        },
+        conclusion: interventionData.conclusion || "",
 
         medications: Array.isArray(interventionData.medicaments)
           ? interventionData.medicaments.map((m: any) => ({
@@ -289,7 +315,7 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
         className="text-sm text-primary hover:underline flex items-center gap-1"
       >
         <ArrowLeft size={14} />
-        Back to patients
+        Retour
       </button>
 
       {/* 👤 PATIENT CARD */}
@@ -302,13 +328,13 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
           <div>
             <p className="font-semibold text-lg">{patient.name}</p>
             <p className="text-sm text-muted-foreground">
-              Patient Profile
+              Profil du patient
             </p>
           </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <Info label="ID Patient" value={patient.id} />
+          <Info label="Nom Patient" value={patient.name} />
           <Info label="Date de naissance" value={patient.dob} />
           <Info label="Sexe" value={patient.sex} />
         </div>
@@ -358,7 +384,7 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
       {/* 🧠 STUDIES SECTION */}
       <div className="medical-panel">
         <div className="panel-header">
-          <span className="panel-header-title">Études & Interventions</span>
+          <span className="panel-header-title">Interventions</span>
         </div>
 
         <div className="p-4">
@@ -382,84 +408,80 @@ const PatientProfileView = ({ patient, onBack, onInterventionLoaded }: Props) =>
 
           {!loadingStudies && !errorStudies && studies.length > 0 && (
             <div className="space-y-3">
-              {studies.map((study) => (
+              {studies.map((study, index) => (
                 <div
                   key={study.id}
-                  className="border border-border rounded-md p-3"
+                  className="flex items-center justify-between p-4 rounded-md border border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all duration-200"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium text-foreground">
-                        {study.description || "No description"}
-                      </h4>
-                      {study.interventionStatus && (
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${study.interventionStatus.toLowerCase() === 'brouillon' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {study.interventionStatus}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-4 flex-1">
+                    {/* Statut Label and Badge */}
+                    <span className="text-sm text-muted-foreground font-medium min-w-fit">Statut :</span>
+                    {study.interventionStatus ? (
+                      <span className={`px-3 py-1 rounded text-sm font-semibold whitespace-nowrap ${study.interventionStatus.toLowerCase() === 'brouillon' 
+                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' 
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'}`}>
+                        {formatStatus(study.interventionStatus)}
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 rounded text-sm font-semibold bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300 whitespace-nowrap">
+                        Aucune intervention liée
+                      </span>
+                    )}
+                  </div>
 
+                  {/* Actions */}
+                  <div className="flex gap-2 items-center">
                     {study.hasIntervention ? (
-                      <div className="flex gap-2">
+                      <>
                         {study.interventionStatus && study.interventionStatus.toLowerCase() === 'brouillon' && study.interventionId ? (
                           <>
                             <Button
                               size="sm"
-                              variant="destructive"
+                              variant="ghost"
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => setInterventionToDelete(study.interventionId!)}
                               disabled={deletingIntervention === study.interventionId || loadingFullIntervention === study.interventionId}
                             >
                               {deletingIntervention === study.interventionId ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <Trash2 className="w-4 h-4 mr-2" />
+                                <Trash2 className="w-4 h-4" />
                               )}
-                              Supprimer
                             </Button>
                             <Button
                               size="sm"
-                              variant="default"
-                              className="bg-emerald-600 hover:bg-emerald-700"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
                               onClick={() => handleCompleteIntervention(study)}
                               disabled={loadingFullIntervention === study.interventionId || deletingIntervention === study.interventionId}
                             >
                               {loadingFullIntervention === study.interventionId ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                               ) : null}
-                              Compléter intervention
+                              Compléter
                             </Button>
                           </>
                         ) : study.interventionStatus && study.interventionStatus.toLowerCase() !== 'brouillon' && study.interventionId ? (
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={() => handleDownloadPdf(study.interventionId!)}
                             disabled={loadingFullIntervention === study.interventionId}
                           >
                             <FileDown className="w-4 h-4 mr-2" />
-                            Télécharger PDF
+                            PDF
                           </Button>
                         ) : null}
-                      </div>
+                      </>
                     ) : (
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-primary text-primary hover:bg-primary/10"
+                        className="bg-primary hover:bg-primary/90 text-white"
                         onClick={() => handleCreateIntervention(study)}
                         disabled={loadingFullIntervention === study.interventionId}
                       >
-                        Créer intervention
+                        Créer
                       </Button>
                     )}
-                  </div>
-
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Study Instance: {study.studyInsta}</div>
-                    <div>Modality: {study.modality}</div>
-                    <div>Date: {study.date}</div>
-                    <div>Series: {study.seriesCount}</div>
                   </div>
                 </div>
               ))}

@@ -67,19 +67,19 @@ const PharmacyDashboard = () => {
     {
       label: "Total Matériel",
       value: dashboard?.totalMateriels ?? 0,
-      icon: Package,
+      icon: Pill,
       color: "text-success",
       bg: "bg-success/10",
     },
     {
-      label: "Médicaments critiques",
+      label: "Médicaments en rupture de stock",
       value: dashboard?.medicamentsCritiques ?? 0,
       icon: AlertTriangle,
       color: "text-destructive",
       bg: "bg-destructive/10",
     },
     {
-      label: "Matériel critique",
+      label: "Matériel en rupture de stock",
       value: dashboard?.materielsCritiques ?? 0,
       icon: Clock,
       color: "text-warning",
@@ -113,7 +113,7 @@ const PharmacyDashboard = () => {
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">
-                {now.toLocaleDateString(undefined, {
+                {now.toLocaleDateString("fr-FR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
@@ -121,16 +121,16 @@ const PharmacyDashboard = () => {
                 })}
               </p>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-1">
-                <span className="text-primary">Pharmacy</span> Dashboard
+                Dashboard <span className="text-primary">pharmacie</span>
               </h1>
               <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
-                <Clock size={14} /> {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Gestion médicaments & matériel
+                <Clock size={14} /> {now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · Gestion médicaments & matériel
               </p>
             </div>
             <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border border-border shadow-sm">
               <Boxes className="text-primary animate-heartbeat" size={28} />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Vue synthèse</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Vue d’ensemble</p>
                 <p className="text-xl font-bold text-foreground">
                   {dashboard ? dashboard.totalMateriels + dashboard.totalMedicaments : "--"}
                   <span className="text-xs font-normal text-muted-foreground"> éléments</span>

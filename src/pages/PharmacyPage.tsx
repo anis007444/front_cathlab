@@ -80,21 +80,33 @@ interface Material {
 function formatDate(iso: string) {
     if (!iso) return "—";
     const d = new Date(iso);
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
     const pad = (n: number) => String(n).padStart(2, "0");
-    return `${months[d.getUTCMonth()]} ${pad(d.getUTCDate())}, ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    return `${pad(d.getUTCDate())} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 const medStatusClass: Record<MedStatus, string> = {
     Available: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    Low: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    Low: "bg-red-500/10 text-red-600 dark:text-red-400",
     "Out of Stock": "bg-red-500/10 text-red-600 dark:text-red-400",
 };
 
 const matStatusClass: Record<MaterialStatus, string> = {
     Available: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    Low: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    Low: "bg-red-500/10 text-red-600 dark:text-red-400",
     Out: "bg-red-500/10 text-red-600 dark:text-red-400",
+};
+
+const medStatusLabel: Record<MedStatus, string> = {
+    Available: "Disponible",
+    Low: "Rupture de stock",
+    "Out of Stock": "Rupture de stock",
+};
+
+const materialStatusLabel: Record<MaterialStatus, string> = {
+    Available: "Disponible",
+    Low: "Rupture de stock",
+    Out: "Rupture de stock",
 };
 
 export function PharmacyPage() {
@@ -159,6 +171,8 @@ export function PharmacyPage() {
     const [medStatusFilter, setMedStatusFilter] = useState<MedStatus | "All">("All");
     const [medSort, setMedSort] = useState<"name" | "quantity">("name");
     const [selectedMedId, setSelectedMedId] = useState<string | null>(null);
+    const [medPage, setMedPage] = useState(1);
+    const [medPageSize, setMedPageSize] = useState(10);
 
     const [medModalOpen, setMedModalOpen] = useState(false);
     const [editingMedId, setEditingMedId] = useState<string | null>(null);
@@ -180,6 +194,8 @@ export function PharmacyPage() {
     const [matTypeFilter, setMatTypeFilter] = useState<MaterialType | "All">("All");
     const [matStatusFilter, setMatStatusFilter] = useState<MaterialStatus | "All">("All");
     const [selectedMatId, setSelectedMatId] = useState<string | null>(null);
+    const [matPage, setMatPage] = useState(1);
+    const [matPageSize, setMatPageSize] = useState(10);
 
     const [matModalOpen, setMatModalOpen] = useState(false);
     const [editingMatId, setEditingMatId] = useState<string | null>(null);
@@ -203,13 +219,21 @@ export function PharmacyPage() {
         return meds
             .filter((m) => {
                 const matchQ = !q || m.name.toLowerCase().includes(q);
-                const matchStat = medStatusFilter === "All" || m.status === medStatusFilter;
+                const matchStat = medStatusFilter === "All"
+                    || (medStatusFilter === "Out of Stock"
+                        ? m.status === "Low" || m.status === "Out of Stock"
+                        : m.status === medStatusFilter);
                 return matchQ && matchStat;
             })
             .sort((a, b) =>
                 medSort === "name" ? a.name.localeCompare(b.name) : b.quantity - a.quantity,
             );
     }, [meds, medSearch, medStatusFilter, medSort]);
+
+    const pagedMeds = useMemo(() => {
+        const start = (medPage - 1) * medPageSize;
+        return filteredMeds.slice(start, start + medPageSize);
+    }, [filteredMeds, medPage, medPageSize]);
 
     const selectedMed = meds.find((m) => m.id === selectedMedId) ?? null;
 
@@ -237,16 +261,16 @@ export function PharmacyPage() {
 
     function validateMed(): boolean {
         const e: Record<string, string> = {};
-        if (!medForm.name.trim()) e.name = "Required";
-        if (medForm.quantity < 0 || Number.isNaN(medForm.quantity)) e.quantity = "Must be ≥ 0";
-        if (medForm.seuilAlerte < 0 || Number.isNaN(medForm.seuilAlerte)) e.seuilAlerte = "Must be ≥ 0";
+        if (!medForm.name.trim()) e.name = "Requis";
+        if (medForm.quantity < 0 || Number.isNaN(medForm.quantity)) e.quantity = "Doit être ≥ 0";
+        if (medForm.seuilAlerte < 0 || Number.isNaN(medForm.seuilAlerte)) e.seuilAlerte = "Doit être ≥ 0";
         setMedErrors(e);
         return Object.keys(e).length === 0;
     }
 
     function saveMed() {
         if (!validateMed()) {
-            toast.error("Please fix the errors in the form.");
+            toast.error("Veuillez corriger les erreurs du formulaire.");
             return;
         }
         const now = new Date().toISOString();
@@ -268,12 +292,12 @@ export function PharmacyPage() {
                             m.id === editingMedId ? { ...m, ...medForm, status, updatedAt: now } : m,
                         ),
                     );
-                    toast.success("Medication updated.");
+                    toast.success("Médicament mis à jour.");
                     setMedModalOpen(false);
                 })
                 .catch(err => {
                     console.error("Error updating medication:", err);
-                    toast.error("Failed to update medication on the server.");
+                    toast.error("Échec de la mise à jour du médicament sur le serveur.");
                 });
         } else {
             const payload = {
@@ -287,12 +311,12 @@ export function PharmacyPage() {
                     const newMedId = res.data?.id ? String(res.data.id) : "m" + Date.now();
                     setMeds((prev) => [...prev, { id: newMedId, ...medForm, status, updatedAt: now }]);
                     setSelectedMedId(newMedId);
-                    toast.success("Medication added.");
+                    toast.success("Médicament ajouté.");
                     setMedModalOpen(false);
                 })
                 .catch(err => {
                     console.error("Error adding medication:", err);
-                    toast.error("Failed to add medication to the server.");
+                    toast.error("Échec de l’ajout du médicament sur le serveur.");
                 });
         }
     }
@@ -306,11 +330,11 @@ export function PharmacyPage() {
                 setMeds((prev) => prev.filter((x) => x.id !== confirmDeleteMedId));
                 if (selectedMedId === confirmDeleteMedId) setSelectedMedId(null);
                 setConfirmDeleteMedId(null);
-                if (m) toast.success(`${m.name} deleted.`);
+                if (m) toast.success(`${m.name} supprimé.`);
             })
             .catch(err => {
                 console.error("Error deleting medication:", err);
-                toast.error("Failed to delete medication from the server.");
+                toast.error("Échec de la suppression du médicament sur le serveur.");
             });
     }
 
@@ -320,10 +344,18 @@ export function PharmacyPage() {
         return materials.filter((m) => {
             const matchQ = !q || m.name.toLowerCase().includes(q);
             const matchType = matTypeFilter === "All" || m.type === matTypeFilter;
-            const matchStat = matStatusFilter === "All" || m.status === matStatusFilter;
+            const matchStat = matStatusFilter === "All"
+                || (matStatusFilter === "Out"
+                    ? m.status === "Low" || m.status === "Out"
+                    : m.status === matStatusFilter);
             return matchQ && matchType && matchStat;
         });
     }, [materials, matSearch, matTypeFilter, matStatusFilter]);
+
+    const pagedMaterials = useMemo(() => {
+        const start = (matPage - 1) * matPageSize;
+        return filteredMaterials.slice(start, start + matPageSize);
+    }, [filteredMaterials, matPage, matPageSize]);
 
     const selectedMat = materials.find((m) => m.id === selectedMatId) ?? null;
 
@@ -353,16 +385,16 @@ export function PharmacyPage() {
 
     function validateMat(): boolean {
         const e: Record<string, string> = {};
-        if (!matForm.name.trim()) e.name = "Required";
-        if (matForm.quantity < 0 || Number.isNaN(matForm.quantity)) e.quantity = "Must be ≥ 0";
-        if (matForm.seuilAlerte < 0 || Number.isNaN(matForm.seuilAlerte)) e.seuilAlerte = "Must be ≥ 0";
+        if (!matForm.name.trim()) e.name = "Requis";
+        if (matForm.quantity < 0 || Number.isNaN(matForm.quantity)) e.quantity = "Doit être ≥ 0";
+        if (matForm.seuilAlerte < 0 || Number.isNaN(matForm.seuilAlerte)) e.seuilAlerte = "Doit être ≥ 0";
         setMatErrors(e);
         return Object.keys(e).length === 0;
     }
 
     function saveMat() {
         if (!validateMat()) {
-            toast.error("Please fix the errors in the form.");
+            toast.error("Veuillez corriger les erreurs du formulaire.");
             return;
         }
         const now = new Date().toISOString();
@@ -386,12 +418,12 @@ export function PharmacyPage() {
                             m.id === editingMatId ? { ...m, ...matForm, status, updatedAt: now } : m,
                         ),
                     );
-                    toast.success("Material updated.");
+                    toast.success("Matériel mis à jour.");
                     setMatModalOpen(false);
                 })
                 .catch(err => {
                     console.error("Error updating material:", err);
-                    toast.error("Failed to update material on the server.");
+                    toast.error("Échec de la mise à jour du matériel sur le serveur.");
                 });
         } else {
             const typeMaterielId = materialTypes.find(t => t.code === matForm.type)?.id || 0;
@@ -407,12 +439,12 @@ export function PharmacyPage() {
                     const newMatId = res.data?.id ? String(res.data.id) : "x" + Date.now();
                     setMaterials((prev) => [...prev, { id: newMatId, ...matForm, status, updatedAt: now }]);
                     setSelectedMatId(newMatId);
-                    toast.success("Material added.");
+                    toast.success("Matériel ajouté.");
                     setMatModalOpen(false);
                 })
                 .catch(err => {
                     console.error("Error adding material:", err);
-                    toast.error("Failed to add material to the server.");
+                    toast.error("Échec de l’ajout du matériel sur le serveur.");
                 });
         }
     }
@@ -426,13 +458,21 @@ export function PharmacyPage() {
                 setMaterials((prev) => prev.filter((x) => x.id !== confirmDeleteMatId));
                 if (selectedMatId === confirmDeleteMatId) setSelectedMatId(null);
                 setConfirmDeleteMatId(null);
-                if (m) toast.success(`${m.name} deleted.`);
+                if (m) toast.success(`${m.name} supprimé.`);
             })
             .catch(err => {
                 console.error("Error deleting material:", err);
-                toast.error("Failed to delete material from the server.");
+                toast.error("Échec de la suppression du matériel sur le serveur.");
             });
     }
+
+    useEffect(() => {
+        setMedPage(1);
+    }, [medSearch, medStatusFilter, medSort]);
+
+    useEffect(() => {
+        setMatPage(1);
+    }, [matSearch, matTypeFilter, matStatusFilter]);
 
     const lowMedCount = meds.filter((m) => m.status === "Out of Stock" || m.quantity <= 10).length;
     const lowMatCount = materials.filter((m) => m.status !== "Available").length;
@@ -443,9 +483,9 @@ export function PharmacyPage() {
             <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
                 <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">Pharmacy Management</h1>
+                        <h1 className="text-xl font-semibold tracking-tight">Gestion de la pharmacie</h1>
                         <p className="text-xs text-muted-foreground">
-                            Manage medications and clinical materials inventory
+                            Gérer le stock des médicaments et du matériel de pharmacie
                         </p>
                     </div>
                     <Button
@@ -453,7 +493,7 @@ export function PharmacyPage() {
                         className="gap-2"
                     >
                         <Plus className="h-4 w-4" />
-                        Add {tab === "medications" ? "Medication" : "Material"}
+                        Ajouter {tab === "medications" ? "un médicament" : "un matériel"}
                     </Button>
                 </div>
             </header>
@@ -467,18 +507,18 @@ export function PharmacyPage() {
                     <TabsList className="mb-6">
                         <TabsTrigger value="medications" className="gap-2">
                             <Pill className="h-4 w-4" />
-                            Medications
+                            Médicaments
                             {lowMedCount > 0 && (
-                                <Badge variant="outline" className="ml-1 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                <Badge variant="outline" className="ml-1 bg-red-500/10 text-red-600 border-red-500/20">
                                     {lowMedCount}
                                 </Badge>
                             )}
                         </TabsTrigger>
                         <TabsTrigger value="materials" className="gap-2">
                             <Package className="h-4 w-4" />
-                            Materials
+                            Matériels
                             {lowMatCount > 0 && (
-                                <Badge variant="outline" className="ml-1 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                <Badge variant="outline" className="ml-1 bg-red-500/10 text-red-600 border-red-500/20">
                                     {lowMatCount}
                                 </Badge>
                             )}
@@ -495,7 +535,7 @@ export function PharmacyPage() {
                                         <Input
                                             value={medSearch}
                                             onChange={(e) => setMedSearch(e.target.value)}
-                                            placeholder="Search medications"
+                                            placeholder="Rechercher un médicament"
                                             className="pl-9"
                                         />
                                     </div>
@@ -508,9 +548,9 @@ export function PharmacyPage() {
                                             <SelectValue placeholder="Status" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="All">All</SelectItem>
-                                            <SelectItem value="Available">Available</SelectItem>
-                                            <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                            <SelectItem value="All">Tous</SelectItem>
+                                            <SelectItem value="Available">Disponible</SelectItem>
+                                            <SelectItem value="Out of Stock">Rupture de stock</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <Button
@@ -520,7 +560,7 @@ export function PharmacyPage() {
                                         className="gap-1"
                                     >
                                         <ArrowUpDown className="h-3.5 w-3.5" />
-                                        {medSort === "name" ? "Name" : "Qty"}
+                                        {medSort === "name" ? "Nom" : "Qté"}
                                     </Button>
                                 </div>
 
@@ -528,9 +568,9 @@ export function PharmacyPage() {
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                                <th className="px-4 py-3 font-medium">Name</th>
-                                                <th className="px-4 py-3 font-medium">Quantity</th>
-                                                <th className="px-4 py-3 font-medium">Status</th>
+                                                <th className="px-4 py-3 font-medium">Nom</th>
+                                                <th className="px-4 py-3 font-medium">Quantité</th>
+                                                <th className="px-4 py-3 font-medium">Statut</th>
                                                 <th className="px-4 py-3 text-right font-medium">Actions</th>
                                             </tr>
                                         </thead>
@@ -538,11 +578,11 @@ export function PharmacyPage() {
                                             {filteredMeds.length === 0 && (
                                                 <tr>
                                                     <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                                                        No medications match your filters.
+                                                        Aucun médicament ne correspond à vos filtres.
                                                     </td>
                                                 </tr>
                                             )}
-                                            {filteredMeds.map((m) => {
+                                            {pagedMeds.map((m) => {
                                                 const low = m.quantity > 0 && m.quantity <= m.seuilAlerte;
                                                 return (
                                                     <tr
@@ -554,22 +594,8 @@ export function PharmacyPage() {
                                                         )}
                                                     >
                                                         <td className="px-4 py-3 font-medium">{m.name}</td>
-                                                        <td className="px-4 py-3">
-                                                            <span
-                                                                className={cn(
-                                                                    "font-medium",
-                                                                    m.quantity === 0 && "text-red-600 dark:text-red-400",
-                                                                    low && "text-amber-600 dark:text-amber-400",
-                                                                )}
-                                                            >
-                                                                {m.quantity}
-                                                            </span>
-                                                            {low && (
-                                                                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                                                                    <AlertTriangle className="h-3 w-3" />
-                                                                    Low
-                                                                </span>
-                                                            )}
+                                                        <td className="px-4 py-3 font-medium">
+                                                            {m.quantity}
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <span
@@ -584,7 +610,7 @@ export function PharmacyPage() {
                                                                         m.status === "Available" ? "bg-emerald-500" : "bg-red-500",
                                                                     )}
                                                                 />
-                                                                {m.status}
+                                                                {medStatusLabel[m.status]}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -617,12 +643,56 @@ export function PharmacyPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={medPage === 1 || filteredMeds.length === 0}
+                                            onClick={() => setMedPage((prev) => Math.max(1, prev - 1))}
+                                        >
+                                            Préc
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground">
+                                            Page {filteredMeds.length === 0 ? 1 : medPage} / {Math.max(1, Math.ceil(filteredMeds.length / medPageSize))}
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={medPage >= Math.ceil(filteredMeds.length / medPageSize) || filteredMeds.length === 0}
+                                            onClick={() => setMedPage((prev) => Math.min(Math.ceil(filteredMeds.length / medPageSize), prev + 1))}
+                                        >
+                                            Suiv
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">Lignes:</span>
+                                        <Select
+                                            value={String(medPageSize)}
+                                            onValueChange={(v) => {
+                                                setMedPageSize(Number(v));
+                                                setMedPage(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-8 w-[80px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="5">5</SelectItem>
+                                                <SelectItem value="10">10</SelectItem>
+                                                <SelectItem value="20">20</SelectItem>
+                                                <SelectItem value="50">50</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
                             </Card>
 
                             {/* Med Details */}
                             <Card className="h-fit border-border p-6">
                                 {!selectedMed ? (
-                                    <EmptyPanel icon={<Pill className="h-10 w-10 text-muted-foreground" />} text="Select a medication to view details" />
+                                    <EmptyPanel icon={<Pill className="h-10 w-10 text-muted-foreground" />} text="Sélectionnez un médicament pour voir ses détails" />
                                 ) : (
                                     <div className="space-y-5">
                                         <div className="flex items-start gap-3">
@@ -645,12 +715,12 @@ export function PharmacyPage() {
                                                 ) : (
                                                     <AlertTriangle className="h-3 w-3" />
                                                 )}
-                                                {selectedMed.status}
+                                                {medStatusLabel[selectedMed.status]}
                                             </span>
                                         </div>
 
                                         <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                            <p className="text-xs uppercase tracking-wide text-muted-foreground">In stock</p>
+                                            <p className="text-xs uppercase tracking-wide text-muted-foreground">En stock</p>
                                             <p className="mt-1 text-2xl font-semibold">
                                                 {selectedMed.quantity}
                                             </p>
@@ -664,13 +734,13 @@ export function PharmacyPage() {
                                         </div>
 
                                         <div className="border-t border-border pt-3 text-xs text-muted-foreground">
-                                            Last updated: {formatDate(selectedMed.updatedAt)}
+                                            Dernière mise à jour : {formatDate(selectedMed.updatedAt)}
                                         </div>
 
                                         <div className="flex gap-2">
                                             <Button variant="outline" className="flex-1 gap-2" onClick={() => openEditMed(selectedMed)}>
                                                 <Edit className="h-4 w-4" />
-                                                Edit
+                                                Modifier
                                             </Button>
                                             <Button
                                                 variant="outline"
@@ -678,7 +748,7 @@ export function PharmacyPage() {
                                                 onClick={() => setConfirmDeleteMedId(selectedMed.id)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
-                                                Delete
+                                                Supprimer
                                             </Button>
                                         </div>
                                     </div>
@@ -697,7 +767,7 @@ export function PharmacyPage() {
                                         <Input
                                             value={matSearch}
                                             onChange={(e) => setMatSearch(e.target.value)}
-                                            placeholder="Search materials"
+                                            placeholder="Rechercher un matériel"
                                             className="pl-9"
                                         />
                                     </div>
@@ -709,7 +779,7 @@ export function PharmacyPage() {
                                             <SelectValue placeholder="Type" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="All">All types</SelectItem>
+                                            <SelectItem value="All">Tous les types</SelectItem>
                                             {materialTypes.map((t) => (
                                                 <SelectItem key={t.id} value={t.code}>
                                                     {t.libelle}
@@ -725,10 +795,9 @@ export function PharmacyPage() {
                                             <SelectValue placeholder="Status" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="All">All</SelectItem>
-                                            <SelectItem value="Available">Available</SelectItem>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Out">Out</SelectItem>
+                                            <SelectItem value="All">Tous</SelectItem>
+                                            <SelectItem value="Available">Disponible</SelectItem>
+                                            <SelectItem value="Out">Rupture de stock</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -737,10 +806,10 @@ export function PharmacyPage() {
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                                <th className="px-4 py-3 font-medium">Name</th>
+                                                <th className="px-4 py-3 font-medium">Nom</th>
                                                 <th className="px-4 py-3 font-medium">Type</th>
-                                                <th className="px-4 py-3 font-medium">Quantity</th>
-                                                <th className="px-4 py-3 font-medium">Status</th>
+                                                <th className="px-4 py-3 font-medium">Quantité</th>
+                                                <th className="px-4 py-3 font-medium">Statut</th>
                                                 <th className="px-4 py-3 text-right font-medium">Actions</th>
                                             </tr>
                                         </thead>
@@ -748,11 +817,11 @@ export function PharmacyPage() {
                                             {filteredMaterials.length === 0 && (
                                                 <tr>
                                                     <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                                                        No materials match your filters.
+                                                        Aucun matériel ne correspond à vos filtres.
                                                     </td>
                                                 </tr>
                                             )}
-                                            {filteredMaterials.map((m) => (
+                                            {pagedMaterials.map((m) => (
                                                 <tr
                                                     key={m.id}
                                                     onClick={() => setSelectedMatId(m.id)}
@@ -763,16 +832,8 @@ export function PharmacyPage() {
                                                 >
                                                     <td className="px-4 py-3 font-medium">{m.name}</td>
                                                     <td className="px-4 py-3 text-muted-foreground">{m.type}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className={cn(
-                                                                "font-medium",
-                                                                m.status === "Out" && "text-red-600 dark:text-red-400",
-                                                                m.status === "Low" && "text-amber-600 dark:text-amber-400",
-                                                            )}
-                                                        >
-                                                            {m.quantity}
-                                                        </span>
+                                                    <td className="px-4 py-3 font-medium">
+                                                        {m.quantity}
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <span
@@ -785,11 +846,10 @@ export function PharmacyPage() {
                                                                 className={cn(
                                                                     "h-1.5 w-1.5 rounded-full",
                                                                     m.status === "Available" && "bg-emerald-500",
-                                                                    m.status === "Low" && "bg-amber-500",
-                                                                    m.status === "Out" && "bg-red-500",
+                                                                    (m.status === "Low" || m.status === "Out") && "bg-red-500",
                                                                 )}
                                                             />
-                                                            {m.status}
+                                                            {materialStatusLabel[m.status]}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
@@ -821,12 +881,56 @@ export function PharmacyPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={matPage === 1 || filteredMaterials.length === 0}
+                                            onClick={() => setMatPage((prev) => Math.max(1, prev - 1))}
+                                        >
+                                            Préc
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground">
+                                            Page {filteredMaterials.length === 0 ? 1 : matPage} / {Math.max(1, Math.ceil(filteredMaterials.length / matPageSize))}
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={matPage >= Math.ceil(filteredMaterials.length / matPageSize) || filteredMaterials.length === 0}
+                                            onClick={() => setMatPage((prev) => Math.min(Math.ceil(filteredMaterials.length / matPageSize), prev + 1))}
+                                        >
+                                            Suiv
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">Lignes:</span>
+                                        <Select
+                                            value={String(matPageSize)}
+                                            onValueChange={(v) => {
+                                                setMatPageSize(Number(v));
+                                                setMatPage(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-8 w-[80px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="5">5</SelectItem>
+                                                <SelectItem value="10">10</SelectItem>
+                                                <SelectItem value="20">20</SelectItem>
+                                                <SelectItem value="50">50</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
                             </Card>
 
                             {/* Material Details */}
                             <Card className="h-fit border-border p-6">
                                 {!selectedMat ? (
-                                    <EmptyPanel icon={<Package className="h-10 w-10 text-muted-foreground" />} text="Select a material to view details" />
+                                    <EmptyPanel icon={<Package className="h-10 w-10 text-muted-foreground" />} text="Sélectionnez un matériel pour voir ses détails" />
                                 ) : (
                                     <div className="space-y-5">
                                         <div className="flex items-start gap-3">
@@ -843,12 +947,12 @@ export function PharmacyPage() {
                                                     matStatusClass[selectedMat.status],
                                                 )}
                                             >
-                                                {selectedMat.status}
+                                                {materialStatusLabel[selectedMat.status]}
                                             </span>
                                         </div>
 
                                         <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                            <p className="text-xs uppercase tracking-wide text-muted-foreground">In stock</p>
+                                            <p className="text-xs uppercase tracking-wide text-muted-foreground">En stock</p>
                                             <p className="mt-1 text-2xl font-semibold">{selectedMat.quantity}</p>
                                         </div>
 
@@ -860,13 +964,13 @@ export function PharmacyPage() {
                                         </div>
 
                                         <div className="border-t border-border pt-3 text-xs text-muted-foreground">
-                                            Last updated: {formatDate(selectedMat.updatedAt)}
+                                            Dernière mise à jour : {formatDate(selectedMat.updatedAt)}
                                         </div>
 
                                         <div className="flex gap-2">
                                             <Button variant="outline" className="flex-1 gap-2" onClick={() => openEditMat(selectedMat)}>
                                                 <Edit className="h-4 w-4" />
-                                                Edit
+                                                Modifier
                                             </Button>
                                             <Button
                                                 variant="outline"
@@ -874,7 +978,7 @@ export function PharmacyPage() {
                                                 onClick={() => setConfirmDeleteMatId(selectedMat.id)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
-                                                Delete
+                                                Supprimer
                                             </Button>
                                         </div>
                                     </div>
@@ -889,15 +993,15 @@ export function PharmacyPage() {
             <Dialog open={medModalOpen} onOpenChange={setMedModalOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{editingMedId ? "Edit medication" : "Add medication"}</DialogTitle>
+                        <DialogTitle>{editingMedId ? "Modifier un médicament" : "Ajouter un médicament"}</DialogTitle>
                         <DialogDescription>
-                            {editingMedId ? "Update medication details." : "Add a new medication to the pharmacy."}
+                            {editingMedId ? "Mettez à jour les détails du médicament." : "Ajoutez un nouveau médicament à la pharmacie."}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-4 py-2">
                         <Field
-                            label="Name"
+                            label="Nom"
                             error={medErrors.name}
                             input={
                                 <Input
@@ -909,7 +1013,7 @@ export function PharmacyPage() {
 
                         <div className="grid grid-cols-2 gap-3">
                             <Field
-                                label="Quantity"
+                                label="Quantité"
                                 error={medErrors.quantity}
                                 input={
                                     <Input
@@ -946,9 +1050,9 @@ export function PharmacyPage() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setMedModalOpen(false)}>
                             <X className="mr-1 h-4 w-4" />
-                            Cancel
+                            Annuler
                         </Button>
-                        <Button onClick={saveMed}>Save</Button>
+                        <Button onClick={saveMed}>Enregistrer</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -957,15 +1061,15 @@ export function PharmacyPage() {
             <Dialog open={matModalOpen} onOpenChange={setMatModalOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{editingMatId ? "Edit material" : "Add material"}</DialogTitle>
+                        <DialogTitle>{editingMatId ? "Modifier un matériel" : "Ajouter un matériel"}</DialogTitle>
                         <DialogDescription>
-                            {editingMatId ? "Update material details." : "Add a new clinical material."}
+                            {editingMatId ? "Mettez à jour les détails du matériel." : "Ajoutez un nouveau matériel clinique."}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-4 py-2">
                         <Field
-                            label="Name"
+                            label="Nom"
                             error={matErrors.name}
                             input={
                                 <Input
@@ -995,7 +1099,7 @@ export function PharmacyPage() {
                                 </Select>
                             </div>
                             <Field
-                                label="Quantity"
+                                label="Quantité"
                                 error={matErrors.quantity}
                                 input={
                                     <Input
@@ -1031,9 +1135,9 @@ export function PharmacyPage() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setMatModalOpen(false)}>
                             <X className="mr-1 h-4 w-4" />
-                            Cancel
+                            Annuler
                         </Button>
-                        <Button onClick={saveMat}>Save</Button>
+                        <Button onClick={saveMat}>Enregistrer</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -1045,14 +1149,14 @@ export function PharmacyPage() {
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this medication?</AlertDialogTitle>
+                        <AlertDialogTitle>Supprimer ce médicament ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently remove the medication from inventory.
+                            Cela supprimera définitivement le médicament de l’inventaire.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmMedDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmMedDelete}>Supprimer</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1063,14 +1167,14 @@ export function PharmacyPage() {
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this material?</AlertDialogTitle>
+                        <AlertDialogTitle>Supprimer ce matériel ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently remove the material from inventory.
+                            Cela supprimera définitivement le matériel de l’inventaire.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmMatDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmMatDelete}>Supprimer</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

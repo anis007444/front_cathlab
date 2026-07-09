@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, type CSSProperties, type PointerEvent as R
 import axios from "axios";
 import { InterventionData } from "@/types/intervention";
 import { Network, Trash2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -366,67 +365,94 @@ const CoronarySchema = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
                   </marker>
                 </defs>
                 <g>
-                  {SEGMENTS.map((seg) => {
-                    const stateInfo = segmentsState[seg.id];
-                    if (!stateInfo) return null;
+             {SEGMENTS.map((seg) => {
+  const stateInfo = segmentsState[seg.id];
+  if (!stateInfo) return null;
 
-                    const isSelected = selectedIds.includes(seg.id);
-                    const w = stateInfo.stent ? seg.w : seg.w * (1 - (stateInfo.stenosis / 100));
-                    const baseOpacity = 0.3 + (stateInfo.timi * 0.23);
+  const isSelected = selectedIds.includes(seg.id);
 
-                    return (
-                      <g
-                        key={seg.id}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => {
-                          setSelectedIds((current) => current.includes(seg.id)
-                            ? current.filter((item) => item !== seg.id)
-                            : [...current, seg.id]);
-                          setActiveId(seg.id);
-                        }}
-                      >
-                        <path
-                          d={seg.d}
-                          fill="none"
-                          stroke="#ffcc00"
-                          strokeWidth={seg.w}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          opacity={0.15}
-                        />
-                        <path
-                          d={seg.d}
-                          fill="none"
-                          stroke="url(#vesselGradient)"
-                          strokeWidth={w}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          opacity={isSelected ? 0.55 : baseOpacity}
-                          style={{
-                            transition: "all 0.3s",
-                            filter: isSelected ? "drop-shadow(0 0 4px rgba(255, 255, 255, 0.95))" : "none"
-                          }}
-                          data-seg-id={seg.id}
-                        />
-                        <path
-                          d={seg.d}
-                          fill="none"
-                          stroke="#5dade2"
-                          strokeWidth={stateInfo.stent ? seg.w + 0.6 : 0}
-                          pointerEvents="none"
-                          opacity={stateInfo.stent ? 0.6 : 0}
-                        />
-                        <path
-                          d={seg.d}
-                          fill="none"
-                          stroke="url(#stentPattern)"
-                          strokeWidth={stateInfo.stent ? seg.w + 0.4 : 0}
-                          pointerEvents="none"
-                          opacity={stateInfo.stent ? 1 : 0}
-                        />
-                      </g>
+  // largeur normale diminuée selon la sténose
+  const vesselWidth = stateInfo.stent
+    ? seg.w
+    : Math.max(seg.w * (1 - stateInfo.stenosis / 100), 1);
+
+  const baseOpacity = 0.3 + (stateInfo.timi * 0.23);
+
+  return (
+    <g
+      key={seg.id}
+      style={{ cursor: "pointer" }}
+      onClick={() => {
+        setSelectedIds((current) =>
+          current.includes(seg.id)
+            ? current.filter((item) => item !== seg.id)
+            : [...current, seg.id]
+        );
+        setActiveId(seg.id);
+      }}
+    >
+
+      {/* Halo jaune uniquement si sténose */}
+      {stateInfo.stenosis > 0 && !stateInfo.stent && (
+        <path
+          d={seg.d}
+          fill="none"
+          stroke="#FFD700"
+          strokeWidth={seg.w + 2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={0.9}
+        />
+      )}
+
+      {/* Vaisseau principal */}
+      <path
+        d={seg.d}
+        fill="none"
+        stroke="url(#vesselGradient)"
+        strokeWidth={vesselWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={isSelected ? 0.7 : baseOpacity}
+        style={{
+          transition: "all 0.3s",
+          filter: isSelected
+            ? "drop-shadow(0 0 4px rgba(255,255,255,0.95))"
+            : "none"
+        }}
+        data-seg-id={seg.id}
+      />
+
+
+      {/* Effet stent */}
+      {stateInfo.stent && (
+        <>
+          <path
+            d={seg.d}
+            fill="none"
+            stroke="#5dade2"
+            strokeWidth={seg.w + 0.8}
+            strokeLinecap="round"
+            opacity={0.8}
+            pointerEvents="none"
+          />
+
+          <path
+            d={seg.d}
+            fill="none"
+            stroke="url(#stentPattern)"
+            strokeWidth={seg.w + 0.5}
+            pointerEvents="none"
+            opacity={1}
+          />
+        </>
+      )}
+
+    </g>
+  );
+})}
                     );
-                  })}
+                  )
                   {annotations.map((annotation) => (
                     <g
                       key={annotation.id}
@@ -616,22 +642,13 @@ const CoronarySchema = ({ data, onChange, onNextStep, onPrevStep }: Props) => {
             )}
           </div>
 
-          <div className="clinical-card flex flex-col gap-4">
-            <label className="font-medium text-foreground">Notes globales (Schéma)</label>
-            <Textarea
-              placeholder="Remarques complémentaires anatomiques, calcifications..."
-              value={data.schemaCoronaireNotes || ""}
-              onChange={(e) => onChange({ schemaCoronaireNotes: e.target.value })}
-              className="flex-1 min-h-[120px] text-sm clinical-input resize-none"
-            />
-            <Button
-              onClick={saveLesions}
-              className="w-full"
-              disabled={isSaving}
-            >
-              {isSaving ? "Enregistrement…" : "✓ Enregistrer lésions"}
-            </Button>
-          </div>
+          <Button
+            onClick={saveLesions}
+            className="w-full"
+            disabled={isSaving}
+          >
+            {isSaving ? "Enregistrement…" : "✓ Enregistrer lésions"}
+          </Button>
 
         </div>
 

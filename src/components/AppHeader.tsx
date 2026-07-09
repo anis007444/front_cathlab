@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Heart, User } from "lucide-react";
+import { Heart, User, LayoutDashboard, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -39,16 +39,18 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => navigate("/dashboard")}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-foreground ring-1 ring-border transition hover:bg-accent hover:text-accent-foreground"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 border border-blue-500/30 hover:border-blue-500/50 transition-all duration-200 text-sm font-medium text-blue-700 dark:text-blue-300 hover:shadow-md hover:shadow-blue-500/20"
             >
+              <LayoutDashboard size={18} />
               Dashboard
             </button>
             <button
               type="button"
               onClick={() => navigate("/examens")}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-foreground ring-1 ring-border transition hover:bg-accent hover:text-accent-foreground"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 hover:border-emerald-500/50 transition-all duration-200 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:shadow-md hover:shadow-emerald-500/20"
             >
-              Study
+              <Activity size={18} />
+              Examens
             </button>
           </>
         )}

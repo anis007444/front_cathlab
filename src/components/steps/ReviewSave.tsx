@@ -1,10 +1,22 @@
 import axios from "axios";
-import { ClipboardCheck, Save, FileDown, AlertCircle, FileCheck, Loader2 } from "lucide-react";
+import { ClipboardCheck, Save, FileDown, FileCheck, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { InterventionData } from "@/types/intervention";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+
+interface InterventionType {
+  id: number;
+  code: string;
+  libelle: string;
+}
+
+interface Indication {
+  id: number;
+  code: string;
+  libelle: string;
+  categorie: string;
+}
 interface Props {
   data: InterventionData;
   onNavigateToStep?: (step: number) => void;
@@ -34,6 +46,64 @@ const ReviewSave = ({ data, onNavigateToStep, onPrevStep }: Props) => {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [interventionTypes, setInterventionTypes] = useState<InterventionType[]>([]);
+  const [indications, setIndications] = useState<Indication[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchTypes = async () => {
+      try {
+        const response = await axios.get<InterventionType[]>(
+          "http://localhost:5106/api/TypeInterventions",
+          { signal: controller.signal }
+        );
+        setInterventionTypes(response.data ?? []);
+      } catch (error) {
+        if (!axios.isCancel(error)) {
+          console.error("Erreur TypeInterventions:", error);
+        }
+      }
+    };
+
+    const fetchIndications = async () => {
+      try {
+        const response = await axios.get<Indication[]>(
+          "http://localhost:5106/api/Indications",
+          { signal: controller.signal }
+        );
+        setIndications(response.data ?? []);
+      } catch (error) {
+        if (!axios.isCancel(error)) {
+          console.error("Erreur Indications:", error);
+        }
+      }
+    };
+
+    fetchTypes();
+    fetchIndications();
+
+    return () => controller.abort();
+  }, []);
+
+  const getInterventionTypeLabel = (id?: number) => {
+    if (!id) return "";
+    return interventionTypes.find((t) => t.id === id)?.libelle || "";
+  };
+
+  const getIndicationLabel = (id?: number) => {
+    if (!id) return "";
+    return indications.find((i) => i.id === id)?.libelle || "";
+  };
+
+  const startTimeValue = data.HeureDebut || data.interventionStartTime || "";
+  const endTimeValue = data.HeureFin || data.interventionEndTime || "";
+  const contrastNameValue = data.ProduitContraste || data.contrastProduct?.name || "";
+  const contrastVolumeValue = data.DoseContraste ?? data.contrastProduct?.volume ?? "";
+  const contrastVolumeLabel = contrastVolumeValue !== "" && contrastVolumeValue !== 0
+    ? `${contrastVolumeValue} ml`
+    : "";
 
   const handleGenerateReport = async () => {
   if (!data.interventionId) {
@@ -134,9 +204,6 @@ const ReviewSave = ({ data, onNavigateToStep, onPrevStep }: Props) => {
     };
   }, [previewUrl]);
 
-  // Vérifier si InterventionDetails est rempli
-  const isInterventionDetailsIncomplete = !data.voieAcces || !data.procedureType || !data.interventionDate;
-
   if (isReportGenerated) {
     return (
       <div className="animate-fade-in space-y-6 flex flex-col items-center justify-center py-16 bg-card rounded-lg border border-border">
@@ -145,7 +212,7 @@ const ReviewSave = ({ data, onNavigateToStep, onPrevStep }: Props) => {
         </div>
         <h2 className="text-2xl font-bold text-foreground">Rapport généré avec succès !</h2>
         <p className="text-muted-foreground text-center max-w-md leading-relaxed">
-          Le rapport d'intervention a été correctement compilé et enregistré sur le serveur. Vous pouvez maintenant le télécharger au format PDF.
+          Le rapport d'intervention a été correctement généré et enregistré. Vous pouvez maintenant le télécharger au format PDF.
         </p>
         
         <div className="mt-8 flex w-full max-w-sm justify-center">
@@ -165,54 +232,59 @@ const ReviewSave = ({ data, onNavigateToStep, onPrevStep }: Props) => {
         <h2 className="text-xl font-semibold text-foreground">Résumé de l'intervention</h2>
       </div>
 
-      {isInterventionDetailsIncomplete && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertTitle className="text-orange-900">Détails de l'intervention incomplets</AlertTitle>
-          <AlertDescription className="text-orange-800">
-            Veuillez compléter les détails de l'intervention (date, voie d'accès, type de procédure) avant de sauvegarder.
-            <Button
-              onClick={() => onNavigateToStep?.(3)}
-              variant="outline"
-              className="mt-3 w-full"
-            >
-              Aller à l'étape Intervention
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="clinical-card space-y-4">
           <Section label="Patient">
             <Row label="Nom" value={data.patientName} />
-            <Row label="ID" value={data.patientId} />
             <Row label="Date de naissance" value={data.patientDOB} />
-            <Row label="Study UID" value={data.studyInstanceUID} />
-          </Section>
-          <Section label="Intervention">
-            <Row label="Voie d'accès" value={data.voieAcces} />
-            <Row label="Procédure" value={data.procedureType} />
-            <Row label="Notes stents" value={data.stentNotes} />
+            <Row label="Sexe" value={data.patientSex} />
           </Section>
         </div>
         <div className="clinical-card space-y-4">
+          <Section label="Intervention">
+            <Row label="Date" value={data.interventionDate ? data.interventionDate.split('T')[0] : ""} />
+            <Row label="Heure de début" value={startTimeValue} />
+            <Row label="Heure de fin" value={endTimeValue} />
+            <Row label="Voie d'accès" value={data.voieAcces} />
+            <Row label="Indication" value={getIndicationLabel(data.indicationId)} />
+            <Row label="Type intervention" value={getInterventionTypeLabel(data.typeInterventionId)} />
+            <Row label="Contraste" value={contrastNameValue} />
+            <Row label="Volume" value={contrastVolumeLabel} />
+          </Section>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="clinical-card space-y-4">
           <Section label="Traitement">
-            <Row label="Contraste" value={data.contrastProduct.name} />
-            <Row label="Volume" value={data.contrastProduct.volume ? `${data.contrastProduct.volume} ml` : ""} />
-            {data.medications.length > 0 && (
-              <div className="pt-1 space-y-1">
-                <span className="text-muted-foreground text-xs">Médicaments:</span>
+            {!data.medications || data.medications.length === 0 ? (
+              <p className="text-muted-foreground text-xs italic">Aucun médicament ajouté</p>
+            ) : (
+              <div className="space-y-2">
+                <span className="text-muted-foreground text-xs font-semibold">Médicaments:</span>
                 {data.medications.map((m, i) => (
-                  <p key={i} className="text-foreground">{m.name} — {m.dose}</p>
+                  <div key={i} className="flex justify-between">
+                    <span className="text-muted-foreground">{m.name}</span>
+                    <span className="text-foreground font-medium">{m.dose}</span>
+                  </div>
                 ))}
               </div>
             )}
+            <div className="flex justify-between pt-2 mt-2 border-t border-border">
+              <span className="text-muted-foreground">Matériels utilisés</span>
+              <span className="text-foreground font-medium">
+                {!data.materialsUsed || data.materialsUsed.length === 0
+                  ? "—"
+                  : data.materialsUsed.map((mat, i) => `${mat.designation} (x${mat.quantite})`).join(", ")}
+              </span>
+            </div>
           </Section>
-          <Section label="Résultats">
-            <Row label="TIMI Flow" value={data.timiFlow} />
-            <Row label="Résultat" value={data.finalOutcome} />
-            <Row label="Complications" value={data.complications} />
+        </div>
+        <div className="clinical-card space-y-4">
+          <Section label="Conclusion">
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {data.conclusion || "—"}
+            </div>
           </Section>
         </div>
       </div>

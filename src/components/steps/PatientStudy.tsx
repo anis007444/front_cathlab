@@ -271,8 +271,8 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
           <AlertCircle className="h-4 w-4 text-blue-600" />
 
           <AlertDescription className="text-blue-800">
-            Veuillez sélectionner une study
-            pour continuer
+            Veuillez sélectionner un examen pour continuer
+            
           </AlertDescription>
         </Alert>
       )}
@@ -283,7 +283,7 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
           <CheckCircle className="h-4 w-4 text-green-600" />
 
           <AlertDescription className="text-green-800">
-            Study sélectionnée :
+            Examen sélectionné :
             <span className="font-semibold">
               {" "}
               {selectedStudy.patientName}
@@ -296,7 +296,7 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
       {viewMode === "table" && (
         <>
           <h2 className="text-xl font-semibold text-foreground">
-            Sélection de la Study
+            Sélection de l'examen
           </h2>
 
           {error && (
@@ -444,10 +444,6 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
                     <TableRow>
 
                       <TableHead>
-                        Patient ID
-                      </TableHead>
-
-                      <TableHead>
                         Nom
                       </TableHead>
 
@@ -460,15 +456,7 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
                       </TableHead>
 
                       <TableHead className="hidden md:table-cell">
-                        Date Study
-                      </TableHead>
-
-                      <TableHead className="hidden md:table-cell">
-                        Modalité
-                      </TableHead>
-
-                      <TableHead className="hidden lg:table-cell">
-                        Description
+                        Date Examen
                       </TableHead>
 
                     </TableRow>
@@ -496,14 +484,10 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
                           });
 
                           toast.success(
-                            `Study sélectionnée : ${study.patientName}`
+                            `Examen sélectionné : ${study.patientName}`
                           );
                         }}
                       >
-
-                        <TableCell>
-                          {study.patientId}
-                        </TableCell>
 
                         <TableCell>
                           {study.patientName}
@@ -519,14 +503,6 @@ const PatientStudy = ({ data, onChange, onNextStep }: Props) => {
 
                         <TableCell className="hidden md:table-cell">
                           {study.studyDate}
-                        </TableCell>
-
-                        <TableCell className="hidden md:table-cell">
-                          {study.studyModal}
-                        </TableCell>
-
-                        <TableCell className="hidden lg:table-cell">
-                          {study.studyDescr}
                         </TableCell>
 
                       </TableRow>

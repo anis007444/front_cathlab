@@ -151,34 +151,23 @@ const InterventionDetails = ({ data, onChange, onNextStep, onPrevStep }: Props) 
 
     const payload = {
       StudyInstanceUid: data.studyInstanceUID,
-      TypeInterventionId: data.typeInterventionId,
-      IndicationId: data.indicationId,
-      VoieAcces: data.voieAcces,
-      ProduitContraste: data.contrastProduct?.name || data.ProduitContraste || "",
-      DoseContraste: Number(data.contrastProduct?.volume ?? data.DoseContraste ?? 0) || 0,
-      HeureDebut: formatTimeSpan(data.HeureDebut || data.interventionStartTime),
-      HeureFin: formatTimeSpan(data.HeureFin || data.interventionEndTime),
+      typeInterventionId: data.typeInterventionId,
+      indicationId: data.indicationId,
+      voieAcces: data.voieAcces,
+      produitContraste: data.ProduitContraste || data.contrastProduct?.name || "",
+      doseContraste: Number(data.DoseContraste ?? data.contrastProduct?.volume ?? 0) || 0,
+      heureDebut: formatTimeSpan(data.HeureDebut || data.interventionStartTime),
+      heureFin: formatTimeSpan(data.HeureFin || data.interventionEndTime),
     };
 
     const updatePayload = {
-      ...payload,
-      patientId: data.patientId,
-      patientName: data.patientName,
-      patientDOB: data.patientDOB,
-      patientSex: data.patientSex,
-      studyInstanceUID: data.studyInstanceUID,
-      studyInsta: data.studyInsta,
-      viewerNotes: data.viewerNotes,
-      interventionDate: data.interventionDate,
-      procedureType: data.procedureType,
-      stentNotes: data.stentNotes,
-      medications: data.medications,
-      materialsUsed: data.materialsUsed,
-      timiFlow: data.timiFlow,
-      finalOutcome: data.finalOutcome,
-      complications: data.complications,
-      schemaCoronaireNotes: data.schemaCoronaireNotes,
-      schemaCoronaireData: data.schemaCoronaireData,
+      typeInterventionId: data.typeInterventionId,
+      indicationId: data.indicationId,
+      voieAcces: data.voieAcces,
+      produitContraste: data.ProduitContraste || data.contrastProduct?.name || "",
+      doseContraste: Number(data.DoseContraste ?? data.contrastProduct?.volume ?? 0) || 0,
+      heureDebut: formatTimeSpan(data.HeureDebut || data.interventionStartTime),
+      heureFin: formatTimeSpan(data.HeureFin || data.interventionEndTime),
     };
 
     if (data.interventionId) {

@@ -55,6 +55,7 @@ export interface InterventionData {
   finalOutcome: string;
   complications: string;
   // Step 6
+  conclusion: string;
   schemaCoronaireNotes: string;
   schemaCoronaireData: any;
 }
@@ -86,6 +87,7 @@ export const defaultInterventionData: InterventionData = {
   timiFlow: "",
   finalOutcome: "",
   complications: "",
+  conclusion: "",
   schemaCoronaireNotes: "",
   schemaCoronaireData: {},
 };
