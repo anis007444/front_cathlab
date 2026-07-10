@@ -22,6 +22,12 @@ const Login = () => {
     const success = await login(email, password);
     setLoading(false);
     if (success) {
+      const mustChangePassword = sessionStorage.getItem("cathlab-must-change-password") === "true";
+      if (mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
+
       const savedUser = localStorage.getItem("cathlab-user");
       const role = savedUser ? String(JSON.parse(savedUser)?.role ?? "").trim().toLowerCase() : undefined;
 

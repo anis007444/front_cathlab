@@ -92,13 +92,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
 
-      const token = res.data.token || res.data.accessToken;
-      if (!token) return false;
-      localStorage.setItem("cathlab-token", token);
-
-      const payload = res.data;
+      const payload = res.data?.data ?? res.data?.result ?? res.data;
       const rawUser = getUserPayload(payload);
       const role = normalizeRole(getRoleValue(rawUser, payload));
+      const token = [
+        res.data?.token,
+        res.data?.accessToken,
+        res.data?.jwt,
+        res.data?.data?.token,
+        res.data?.data?.accessToken,
+        res.data?.data?.jwt,
+        res.data?.result?.token,
+        res.data?.result?.accessToken,
+        res.data?.result?.jwt,
+        payload?.token,
+        payload?.accessToken,
+        payload?.jwt,
+      ].find((value) => typeof value === "string" && value.trim().length > 0);
+      const requirePasswordChange = Boolean(
+        res.data?.mustChangePassword ??
+          res.data?.data?.mustChangePassword ??
+          res.data?.result?.mustChangePassword ??
+          payload?.mustChangePassword ??
+          rawUser?.mustChangePassword ??
+          false
+      );
+
+      if (token) {
+        localStorage.setItem("cathlab-token", token);
+      } else {
+        localStorage.removeItem("cathlab-token");
+      }
 
       const userData: User = {
         id: String(rawUser?.id ?? rawUser?.userId ?? payload?.userId ?? payload?.id ?? "1"),
@@ -110,6 +134,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(userData);
       localStorage.setItem("cathlab-user", JSON.stringify(userData));
+
+      if (requirePasswordChange) {
+        sessionStorage.setItem("cathlab-must-change-password", "true");
+        sessionStorage.setItem("cathlab-pending-email", userData.email);
+      } else {
+        sessionStorage.removeItem("cathlab-must-change-password");
+        sessionStorage.removeItem("cathlab-pending-email");
+      }
 
       return true;
     } catch (error) {
@@ -148,6 +180,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     localStorage.removeItem("cathlab-user");
     localStorage.removeItem("cathlab-token");
+    sessionStorage.removeItem("cathlab-must-change-password");
+    sessionStorage.removeItem("cathlab-pending-email");
   };
 
   return (

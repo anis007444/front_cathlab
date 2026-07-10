@@ -18,6 +18,7 @@ import { PharmacyPage } from "./pages/PharmacyPage.tsx";
 import PharmacyDashboard from "./pages/PharmacyDashboard.tsx";
 import DashboardPage from "./pages/DashboardPage.tsx";
 import StudyPage from "./pages/StudyPage.tsx";
+import ChangePasswordPage from "./pages/ChangePasswordPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/" element={<ProtectedRoute><RoleRedirect /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/examens" element={<ProtectedRoute><StudyPage /></ProtectedRoute>} />
